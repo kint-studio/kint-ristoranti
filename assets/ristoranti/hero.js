@@ -1,9 +1,10 @@
 import {IdleCursor} from '../idle-cursor.js?v=36';
 import {loadMaterial as loadSatinMaterial} from './material.js?v=r5-1';
 import {loadFork3D as loadFork} from './fork-3d.js?v=r5-1';
-import {FORK_IMAGES} from './fork-images.js?v=r5-1';
-import {ForkScene,FORMATION_DONE_MS,layout,goldImageUrl} from './fork-scene.js?v=r5-1';
-const decoded=async src=>{const image=new Image();image.src=src;await image.decode();return image;};
+import {FORK_IMAGES} from './fork-images.js?v=r5-2';
+import {ForkScene,FORMATION_DONE_MS,layout,goldImageUrl} from './fork-scene.js?v=r5-2';
+// Resolves on load, then waits for decode() for at most 500 ms: in a hidden tab decode() may never settle (same race as fork-3d.js).
+export const decoded=src=>new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=src;}).then(async image=>{await Promise.race([image.decode().catch(()=>{}),new Promise(r=>setTimeout(r,500))]);return image;});
 // The hero scene: the fork forms from binary digits, then becomes a 3D object that turns towards the pointer. Starts at 35% visibility; draws nothing off screen or in a hidden tab (the loop stops itself, like frame() in the main site's app.js); 4 frames per second when still.
 // Without WebGL2 it falls back to the photo with relief, with the silver material computed in a worker. If anything fails, the scene layer is hidden and the hero keeps its text on the plain section background.
 // Every browser dependency can be injected for the tests.

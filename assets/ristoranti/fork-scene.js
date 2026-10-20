@@ -1,5 +1,5 @@
 import {SceneEngine,FORMATION_DONE_MS} from './scene-engine.js?v=r5-1';
-import {goldImagePath} from './fork-images.js?v=r5-1';
+import {goldImagePath} from './fork-images.js?v=r5-2';
 export {FORMATION_DONE_MS};
 // Where the drawing sits inside the image (fractions 0-1), measured once: the page knows how big the fork will be before the image arrives.
 export const BOUNDS={top:.042,bottom:.958,left:.417,right:.625};

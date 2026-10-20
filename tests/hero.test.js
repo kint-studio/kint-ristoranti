@@ -71,3 +71,17 @@ test('(e) immagine che non si carica: startHero non lancia e la scena sparisce',
  s.run();assert.equal(s.frames.n,0);});
 test('stop(): la scena si ferma',async()=>{
  const s=setup({fork:fork3d()});await s.hero.ready;s.intersect(1);s.run(5);s.hero.stop();const n=s.frames.n;s.run();assert.equal(s.frames.n,n);});
+
+// Il caricamento predefinito non si blocca se decode() non si risolve mai (scheda in background).
+test('decoded: l\'immagine arriva anche se decode() non si risolve mai',async()=>{
+ const {decoded}=await import('../assets/ristoranti/hero.js');
+ const saved=globalThis.Image;
+ globalThis.Image=class{decode(){return new Promise(()=>{});}set src(v){this._src=v;setTimeout(()=>this.onload(),0);}};
+ try{const image=await decoded('/x.webp');assert.equal(image._src,'/x.webp');}finally{globalThis.Image=saved;}
+});
+test('decoded: un errore di caricamento rifiuta',async()=>{
+ const {decoded}=await import('../assets/ristoranti/hero.js');
+ const saved=globalThis.Image;
+ globalThis.Image=class{decode(){return Promise.resolve();}set src(v){setTimeout(()=>this.onerror(new Error('404')),0);}};
+ try{await assert.rejects(decoded('/x.webp'));}finally{globalThis.Image=saved;}
+});

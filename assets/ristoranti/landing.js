@@ -2,7 +2,7 @@ import {FooterWordmark} from '../footer-wordmark.js?v=33';
 import {initMenu} from './menu.js?v=r4-2';
 import {initAccordions} from './accordion.js?v=r4-2';
 import {initContact} from './contact.js?v=r4-2';
-import {startHero} from './hero.js?v=r5-1';
+import {startHero} from './hero.js?v=r5-2';
 import {ServiceTrail} from '../service-trail.js?v=rt-7';
 // Anchors (#top, #servizi, #prenota) are native links; the page scrolls natively.
 export function initLanding(doc=document){
