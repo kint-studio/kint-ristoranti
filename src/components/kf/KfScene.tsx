@@ -5,15 +5,7 @@ import { IdleCursor } from "./engine/idle-cursor";
 import { loadFork3D } from "./engine/fork-3d";
 import { loadMaterial } from "./engine/material-loader";
 import { FORMATION_DONE_MS, SceneEngine } from "./engine/scene-engine";
-
-/** Le immagini della forchetta in `public/forma/`. La sagoma da 640 px serve a disegnare le cifre; le due piccole
- *  texture `a` e `b` sono il modello 3D; quelle con l'oro (`kintsugi`) servono solo se il browser non ha WebGL2. */
-export const FORK_IMAGES = {
-  ceramic640: "/forma/forchetta3-ceramic-640.webp",
-  ceramic1024: "/forma/forchetta3-ceramic-1024.webp",
-  a: "/forma/forchetta3-3d-a.webp",
-  b: "/forma/forchetta3-3d-b.webp",
-};
+import { FORK_IMAGES } from "./fork-images";
 
 /** Dove sta il disegno dentro l'immagine (frazioni 0-1), misurato una volta sull'immagine: cosi' la pagina sa quanto
  *  sara' grande la forchetta prima ancora di scaricare l'immagine e puo' iniziare subito. */

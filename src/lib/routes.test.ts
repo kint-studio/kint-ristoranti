@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { FORK_IMAGES } from "../components/kf/fork-images";
 import { LANDING } from "./content";
 import { EXTRA_LANGS, LANGS, UI, homeHref, machineHref } from "./i18n";
 import { TRANSLATIONS, translateLanding } from "./landing-i18n";
@@ -59,5 +60,11 @@ describe("traduzioni", () => {
       return typeof v === "string" && v.trim() === "";
     });
     expect(empty).toEqual([]);
+  });
+});
+
+describe("immagini", () => {
+  it.each(Object.values(FORK_IMAGES))("%s esiste in public/", (src) => {
+    expect(existsSync(join(__dirname, "..", "..", "public", src))).toBe(true);
   });
 });
