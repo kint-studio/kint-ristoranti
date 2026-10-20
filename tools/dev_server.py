@@ -92,7 +92,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def send_header(self, keyword, value):
         # an header from _headers replaces the default of the same name
-        if not self.injecting and keyword.lower() in {k.lower() for k, _ in self.extra}:
+        if not self.injecting and keyword.lower() != 'cache-control' and keyword.lower() in {k.lower() for k, _ in self.extra}:
             return
         super().send_header(keyword, value)
 
