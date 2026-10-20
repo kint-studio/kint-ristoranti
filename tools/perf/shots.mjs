@@ -26,27 +26,35 @@ try {
       await page.goto(new URL(p, base).href, { waitUntil: 'networkidle0', timeout: 60000 });
       await sleep(2500);
       const shot = (name) => page.screenshot({ path: join(dir, `${name}.png`) });
-      const goTo = async (sel) => {
-        await page.evaluate((s) => document.querySelector(s)?.scrollIntoView({ behavior: 'instant', block: 'start' }), sel);
+      // A missing selector would leave the page where it is and save a misleading shot: warn and skip it.
+      const missing = async (sel, name) => {
+        if (await page.$(sel)) return false;
+        console.error(`attenzione: ${sel} non trovato in ${p} (${w}x${h}), ${name}.png saltato`);
+        process.exitCode = 1;
+        return true;
+      };
+      const goTo = async (sel, name) => {
+        if (await missing(sel, name)) return false;
+        await page.evaluate((s) => document.querySelector(s).scrollIntoView({ behavior: 'instant', block: 'start' }), sel);
         await sleep(1500);
+        return true;
       };
 
       await shot('hero');
 
-      await goTo('#servizi');
-      // open the first service if it is not already
-      await page.evaluate(() => {
-        const b = document.querySelector('#servizi button[aria-expanded]');
-        if (b && b.getAttribute('aria-expanded') !== 'true') b.click();
-      });
-      await sleep(800);
-      await shot('servizi');
+      if (await goTo('#servizi', 'servizi')) {
+        // open the first service if it is not already
+        await page.evaluate(() => {
+          const b = document.querySelector('#servizi button[aria-expanded]');
+          if (b && b.getAttribute('aria-expanded') !== 'true') b.click();
+        });
+        await sleep(800);
+        await shot('servizi');
+      }
 
-      await goTo('#prenota');
-      await shot('contatto');
+      if (await goTo('#prenota', 'contatto')) await shot('contatto');
 
-      await goTo('#faq');
-      await shot('faq');
+      if (await goTo('#faq', 'faq')) await shot('faq');
 
       await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
       await sleep(1500);
@@ -54,11 +62,11 @@ try {
 
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       await sleep(1000);
-      const toggle = await page.$('.kf-menu-toggle');
-      if (toggle) {
-        await toggle.click();
+      if (!(await missing('.kf-menu-toggle', 'menu'))) {
+        await page.click('.kf-menu-toggle');
         await sleep(1200);
-        await shot('menu');
+        // the menu only counts as open if the toggle says so (no JS, no menu)
+        if (!(await missing('.kf-menu-toggle[aria-expanded="true"]', 'menu'))) await shot('menu');
       }
       await page.close();
       console.log(`${w}x${h} ${p} ok`);
