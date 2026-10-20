@@ -10,7 +10,7 @@ let dir,proc,base;
 const freePort=()=>new Promise(r=>{const s=createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
 before(async()=>{
  dir=mkdtempSync(tmpdir()+'/kint-dev-');mkdirSync(dir+'/a');
- writeFileSync(dir+'/_headers','/*\n  Content-Security-Policy: default-src \'self\'\n/x.txt\n  Content-Type: text/plain; charset=utf-8\n');
+ writeFileSync(dir+'/_headers','/*\n  Content-Security-Policy: default-src \'self\'\n/x.txt\n  Content-Type: text/plain; charset=utf-8\n  Cache-Control: public, max-age=31536000, immutable\n');
  writeFileSync(dir+'/_redirects','/ /a/ 301\n');
  writeFileSync(dir+'/a/index.html','<p>a</p>');writeFileSync(dir+'/x.txt','x');writeFileSync(dir+'/404.html','<p>non trovata</p>');
  const port=await freePort();base=`http://127.0.0.1:${port}`;
@@ -30,6 +30,10 @@ test('header di _headers applicati per percorso',async()=>{
 test('un header di _headers sostituisce quello di default, senza duplicati',async()=>{
  const r=await fetch(base+'/x.txt');
  assert.equal(r.headers.get('content-type'),'text/plain; charset=utf-8');
+});
+test('Cache-Control resta no-store, una sola volta, anche se _headers ne imposta uno',async()=>{
+ const r=await fetch(base+'/x.txt');
+ assert.equal(r.headers.get('cache-control'),'no-store');
 });
 test('404 con 404.html',async()=>{
  const r=await fetch(base+'/nope');
