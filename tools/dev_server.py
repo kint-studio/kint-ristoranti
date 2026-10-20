@@ -56,6 +56,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     headers_rules = []
     redirect_rules = []
     extra = []
+    injecting = False
 
     def send_head(self):
         path = urllib.parse.unquote(urllib.parse.urlsplit(self.path).path)
@@ -89,11 +90,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         return None if self.command == 'HEAD' else io.BytesIO(body)
 
+    def send_header(self, keyword, value):
+        # an header from _headers replaces the default of the same name
+        if not self.injecting and keyword.lower() in {k.lower() for k, _ in self.extra}:
+            return
+        super().send_header(keyword, value)
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store')
+        self.injecting = True
         for k, v in self.extra:
             if k.lower() != 'cache-control':  # in sviluppo la cache resta spenta
                 self.send_header(k, v)
+        self.injecting = False
         super().end_headers()
 
 
@@ -101,9 +110,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=3101)
     parser.add_argument('--dist', action='store_true', help='serve dist/ con _headers e _redirects')
+    parser.add_argument('--root', help='cartella da servire (con _headers e _redirects); default: radice del repository')
     args = parser.parse_args()
-    base = ROOT / 'dist' if args.dist else ROOT
-    if args.dist:
+    base = pathlib.Path(args.root).resolve() if args.root else ROOT / 'dist' if args.dist else ROOT
+    if args.dist or args.root:
         Handler.use_rules = True
         Handler.headers_rules = load_headers(base)
         Handler.redirect_rules = load_redirects(base)

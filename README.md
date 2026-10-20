@@ -8,7 +8,17 @@ Landing statica di KINT per i ristoranti, costruita con lo stesso metodo del sit
 - `npm run dev`: server locale su http://localhost:3101/ (pagina: http://localhost:3101/ristoranti/).
 - `npm test`: esegue i test (`node --test`).
 - `npm run build`: genera `dist/` (pagine, export per le AI, `_headers`, `_redirects`). `npm run export` è un alias.
-- `python tools/dev_server.py --dist`: serve `dist/` applicando `_headers` e `_redirects`.
+- `python tools/dev_server.py --dist`: serve `dist/` applicando `_headers` e `_redirects` (`--root <cartella>` fa lo stesso su un'altra cartella).
+
+## Indirizzi
+
+| Indirizzo | Pagina |
+|---|---|
+| `/ristoranti/` | Human italiana |
+| `/en/ristoranti/`, `/fr/ristoranti/`, `/de/ristoranti/` | Human tradotte |
+| `/ai/ristoranti/`, `/en/ai/ristoranti/`, `/fr/ai/ristoranti/`, `/de/ai/ristoranti/` | Machine |
+
+`/`, `/en/`, `/fr/` e `/de/` rimandano con 301 alla landing della lingua.
 
 ## Variabili
 
