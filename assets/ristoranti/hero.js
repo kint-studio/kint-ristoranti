@@ -1,8 +1,10 @@
 import {IdleCursor} from '../idle-cursor.js?v=36';
 import {loadMaterial as loadSatinMaterial} from './material.js?v=r5-1';
-import {loadFork3D as loadFork} from './fork-3d.js?v=r5-1';
+import {loadFork3D as loadForkOnPage,loadFork3DWorker} from './fork-3d.js?v=r8-1';
 import {FORK_IMAGES} from './fork-images.js?v=r5-2';
-import {ForkScene,FORMATION_DONE_MS,layout,goldImageUrl} from './fork-scene.js?v=r5-2';
+import {ForkScene,FORMATION_DONE_MS,layout,goldImageUrl,maxDprFor} from './fork-scene.js?v=r5-2';
+// The GPU fork is drawn in a worker, so its cold start (WebGL2 context, shader, textures) never blocks the page; where the browser cannot, on the page as before.
+const loadFork=(urls,createCanvas,{size}={})=>loadFork3DWorker(urls,{workerUrl:new URL('./fork-3d-worker.js?v=r8-1',import.meta.url),size}).then(fork=>fork||loadForkOnPage(urls,createCanvas));
 // Resolves on load, then waits for decode() for at most 500 ms: in a hidden tab decode() may never settle (same race as fork-3d.js).
 export const decoded=src=>new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=src;}).then(async image=>{await Promise.race([image.decode().catch(()=>{}),new Promise(r=>setTimeout(r,500))]);return image;});
 // The hero scene: the fork forms from binary digits, then becomes a 3D object that turns towards the pointer. Starts at 35% visibility; draws nothing off screen or in a hidden tab (the loop stops itself, like frame() in the main site's app.js); 4 frames per second when still.
@@ -29,13 +31,19 @@ export function startHero(root,{matchMedia=q=>globalThis.matchMedia(q),Intersect
  const resume=()=>{if(alive&&engine&&!running&&visible&&pageVisible){running=true;last=0;raf(frame);}};
  const fail=()=>{root.hidden=true;canvas.hidden=true;return null;};
  const ready=(async()=>{
-  const box=root.getBoundingClientRect(),goldUrl=goldImageUrl(layout(box.width,box.height).w,{touch,dpr:ratio()});
+  // The hero is measured only when it is needed (the worker is ready, the images have arrived), never while the module runs: that would force a layout of the page inside the script.
+  // size: the real pixels of the fork at rest, as the scene will ask for them (ForkScene caps the dpr with maxDprFor)
+  const size=()=>{const box=root.getBoundingClientRect(),rect=layout(box.width,box.height),scale=Math.min(ratio(),maxDprFor(touch));return [Math.max(2,Math.round(rect.w*scale)),Math.max(2,Math.round(rect.h*scale))];};
   // The fork is not a photo: the GPU draws it from two small textures, and the silhouette image only draws the digits (the smallest is enough).
-  const [base,fork3d]=await Promise.all([loadImage(FORK_IMAGES.ceramic640),loadFork3D({a:FORK_IMAGES.a,b:FORK_IMAGES.b},createCanvas)]);
-  if(!alive)return null;
+  const [base,fork3d]=await Promise.all([loadImage(FORK_IMAGES.ceramic640),loadFork3D({a:FORK_IMAGES.a,b:FORK_IMAGES.b},createCanvas,{size})]);
+  if(!alive){fork3d?.destroy?.();return null;}
+  const box=root.getBoundingClientRect();
   engine=new Engine({canvas,createCanvas,base,width:box.width,height:box.height,dpr:ratio(),reduced,touch,fork3d:fork3d||null});
+  // a newer image of the fork from the worker: draw the scene again with it
+  if(fork3d)fork3d.onUpdate=()=>{engine.cachedPose=null;keepActive();resume();};
+  if(fork3d?.destroy)cleanups.push(()=>fork3d.destroy());
   // Without WebGL2 the material under the reveal is computed in a worker, so the page never blocks; the fork stays satin silver there too.
-  if(!fork3d)loadMaterial(goldUrl,{workerUrl:new URL('./material-worker.js?v=r5-1',import.meta.url),load:loadImage,make:createCanvas,satin:true}).then(tech=>{if(alive&&tech)engine.setTech(tech);},()=>{});
+  if(!fork3d)loadMaterial(goldImageUrl(layout(box.width,box.height).w,{touch,dpr:ratio()}),{workerUrl:new URL('./material-worker.js?v=r5-1',import.meta.url),load:loadImage,make:createCanvas,satin:true}).then(tech=>{if(alive&&tech)engine.setTech(tech);},()=>{});
   // Every real gesture stops the idle cursor.
   const cancelIdle=()=>{if(idle.activity()&&engine.flow){engine.flow.pointer=null;engine.flow.old=null;}};
   const pointer=e=>{if(!engine.done||e.target?.closest?.('a,button,input,textarea,summary'))return;keepActive();const r=root.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;

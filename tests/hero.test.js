@@ -20,14 +20,14 @@ function setup({reduced=false,touch=false,hidden=false,fork=null,loadImage}={}){
  const run=(frames=60)=>{for(let i=0;i<frames;i++){clock+=1000/60;const q=queue;queue=[];q.forEach(cb=>cb(clock));}};
  const frames={n:0},engines=[];
  const Engine=class extends ForkScene{constructor(o){super(o);engines.push(this);}frame(...a){frames.n++;return super.frame(...a);}};
- const material=[];
+ const material=[],forkArgs=[];
  const hero=startHero(root,{
   matchMedia:q=>({matches:(q.includes('reduce')&&reduced)||(q.includes('hover: none')&&touch)}),
   IntersectionObserver:IO,ResizeObserver:RO,document:doc,window:win,dpr:1,raf,now:()=>clock,Engine,
   loadImage:loadImage||(async()=>({width:640,height:960})),createCanvas:canvas,
-  loadFork3D:async()=>fork,loadMaterial:(url,o)=>{material.push({url,o});return Promise.resolve({width:1024,height:1536});}});
+  loadFork3D:async(...a)=>{forkArgs.push(a);return fork;},loadMaterial:(url,o)=>{material.push({url,o});return Promise.resolve({width:1024,height:1536});}});
  const intersect=ratio=>observer.cb([{isIntersecting:ratio>0,intersectionRatio:ratio}]);
- return {hero,root,view,ring,doc,win,run,frames,engines,material,intersect,get queued(){return queue.length;}};}
+ return {hero,root,view,ring,doc,win,run,frames,engines,material,forkArgs,intersect,get queued(){return queue.length;}};}
 const fork3d=()=>{const calls=[];return {calls,draw:(...a)=>calls.push(a)};};
 
 test('(a) hero non visibile: nessun engine.frame in 1 s',async()=>{
@@ -61,6 +61,13 @@ test('(d2) con la forchetta 3D: niente materiale, la GPU disegna e la posa segue
  s.win.emit('pointermove',{clientX:1400,clientY:100,pointerType:'mouse',target:{}});s.run(30);
  assert.ok(f.calls.length>before);assert.ok(engine.pose.yaw>0.1&&engine.pose.pitch<-0.05,`posa ${JSON.stringify(engine.pose)}`);
  assert.equal(s.ring.style.opacity,'1');});
+test('(d4) forchetta nel worker: chiede la misura a riposo in pixel veri, ridisegna quando arriva un\'immagine nuova e chiude il worker con stop()',async()=>{
+ // desktop 1440x900 a dpr 1: rettangolo 445,41 x 668,12 (vedi fork-scene.test.js)
+ let destroyed=0;const f={...fork3d(),onUpdate:null,destroy:()=>destroyed++},s=setup({fork:f});const engine=await s.hero.ready;
+ assert.deepEqual(s.forkArgs[0][2].size(),[445,668]);assert.equal(typeof f.onUpdate,'function');
+ s.intersect(1);s.run(200);assert.equal(engine.done,true);s.run(20);const n=f.calls.length;
+ f.onUpdate();assert.equal(engine.cachedPose,null);s.run(2);assert.ok(f.calls.length>n,'la scena ridisegna con l\'immagine nuova');
+ s.hero.stop();assert.equal(destroyed,1);});
 test('(d3) telefono: dopo l\'attesa il cursore automatico gira la forchetta',async()=>{
  const s=setup({touch:true,fork:fork3d()});const engine=await s.hero.ready;s.intersect(1);s.run(200);
  assert.deepEqual(engine.targetPose,{yaw:0,pitch:0});s.run(200);

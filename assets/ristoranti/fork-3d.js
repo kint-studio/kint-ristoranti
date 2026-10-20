@@ -102,10 +102,8 @@ void main(){
 }`;
 // Decoded off the main thread: uploading an undecoded image to a texture would decode it here and stall scrolling. In a hidden tab decode() may never settle, so it gives up waiting after 500 ms.
 const loadImage=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;}).then(async img=>{await Promise.race([img.decode().catch(()=>{}),new Promise(r=>setTimeout(r,500))]);return img;});
-// Loads both textures and prepares the GPU. Resolves null without WebGL2 (or if anything fails): the scene then falls back to the photo with relief.
-export async function loadFork3D(urls,createCanvas){try{
- const [imgA,imgB]=await Promise.all([loadImage(urls.a),loadImage(urls.b)]);
- const surface=createCanvas(),gl=surface.getContext('webgl2',{alpha:true,antialias:false,premultipliedAlpha:true});if(!gl)return null;
+// Compiles the program and uploads both textures into gl; returns render(w,h,yaw,pitch,seams), which draws the fork turned by yaw and pitch (radians) over the whole w x h drawing buffer. Shared by the page and the worker.
+export async function prepareFork(gl,imgA,imgB){
  const compile=(kind,source)=>{const s=gl.createShader(kind);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s)||'shader');return s;};
  const program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,VERTEX));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,FRAGMENT));gl.linkProgram(program);
  // The long shader may block the page while compiling: where the browser allows it, it compiles in parallel.
@@ -116,15 +114,49 @@ export async function loadFork3D(urls,createCanvas){try{
  [imgA,imgB].forEach((img,i)=>{const tex=gl.createTexture();gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,tex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);});
  gl.uniform1i(gl.getUniformLocation(program,'tA'),0);gl.uniform1i(gl.getUniformLocation(program,'tB'),1);
  const uR=gl.getUniformLocation(program,'uR'),uSeams=gl.getUniformLocation(program,'uSeams'),matrix=new Float32Array(9);
+ return (w,h,yaw,pitch,seams)=>{
+  gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+  const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  // columns of R: turn right (yaw) then down (pitch); the third column is the slab normal
+  matrix.set([cy,-sp*sy,-cp*sy,0,cp,-sp,sy,sp*cy,cp*cy]);gl.uniformMatrix3fv(uR,false,matrix);
+  gl.uniform1f(uSeams,seams?1:0);gl.drawArrays(gl.TRIANGLES,0,3);};}
+// Resolution of a draw: the real pixels the rect covers (the 2D context is already scaled by the dpr).
+const pixels=(ctx,rect)=>{const scale=ctx.getTransform().a;return [Math.max(2,Math.round(rect.w*scale)),Math.max(2,Math.round(rect.h*scale))];};
+// Loads both textures and prepares the GPU on the page. Resolves null without WebGL2 (or if anything fails): the scene then falls back to the photo with relief.
+export async function loadFork3D(urls,createCanvas){try{
+ const [imgA,imgB]=await Promise.all([loadImage(urls.a),loadImage(urls.b)]);
+ const surface=createCanvas(),gl=surface.getContext('webgl2',{alpha:true,antialias:false,premultipliedAlpha:true});if(!gl)return null;
+ const render=await prepareFork(gl,imgA,imgB);
  return {
   // Draws the fork turned by yaw and pitch (radians) inside rect; seams: with the gold seams.
-  draw(ctx,rect,yaw,pitch,seams){
-   // resolution: the real pixels the rect covers (the 2D context is already scaled by the dpr)
-   const scale=ctx.getTransform().a,w=Math.max(2,Math.round(rect.w*scale)),h=Math.max(2,Math.round(rect.h*scale));
-   if(surface.width!==w||surface.height!==h){surface.width=w;surface.height=h;}
-   gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
-   const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
-   // columns of R: turn right (yaw) then down (pitch); the third column is the slab normal
-   matrix.set([cy,-sp*sy,-cp*sy,0,cp,-sp,sy,sp*cy,cp*cy]);gl.uniformMatrix3fv(uR,false,matrix);
-   gl.uniform1f(uSeams,seams?1:0);gl.drawArrays(gl.TRIANGLES,0,3);ctx.drawImage(surface,rect.x,rect.y,rect.w,rect.h);},
+  draw(ctx,rect,yaw,pitch,seams){const [w,h]=pixels(ctx,rect);if(surface.width!==w||surface.height!==h){surface.width=w;surface.height=h;}render(w,h,yaw,pitch,seams);ctx.drawImage(surface,rect.x,rect.y,rect.w,rect.h);},
  };}catch{return null;}}
+// The same fork drawn by the GPU in a worker (OffscreenCanvas). On a cold start, creating the WebGL2 context, compiling the shader and sizing the drawing buffer block the thread for tens of milliseconds: in the worker they never block the page.
+// The worker sends back one image per pose; draw() shows the latest one and asks for the next, so a turn follows the pointer about one frame later. When a newer image arrives, onUpdate() asks the scene to draw again.
+// It resolves once the fork at rest (size() gives [w,h] in real pixels, read when the worker is ready) is ready with and without seams, so the first frame is already the final one. Resolves null, silently like loadFork3D, if the browser cannot do it (no WebGL2 in workers, worker error or no answer within timeout): the caller then uses loadFork3D.
+export async function loadFork3DWorker(urls,{workerUrl,size,load=loadImage,timeout=8000}={}){
+ if(typeof Worker==='undefined'||typeof OffscreenCanvas==='undefined'||typeof createImageBitmap==='undefined')return null;
+ let worker,timer;try{
+ const images=await Promise.all([load(urls.a),load(urls.b)]);
+ const [a,b]=await Promise.all(images.map(img=>createImageBitmap(img,{premultiplyAlpha:'none',colorSpaceConversion:'none'})));
+ worker=new Worker(workerUrl,{type:'module'});
+ const slots=[{},{}],same=(p,q)=>!!p&&!!q&&p.w===q.w&&p.h===q.h&&p.yaw===q.yaw&&p.pitch===q.pitch;
+ // one request in flight per image (with and without seams): the worker always draws the latest pose asked for
+ const send=i=>{const s=slots[i];s.busy=true;s.sent=s.want;worker.postMessage({slot:i,seams:i===1,...s.want});};
+ const fork={onUpdate:null,
+  draw(ctx,rect,yaw,pitch,seams){const [w,h]=pixels(ctx,rect),i=seams?1:0,s=slots[i];s.want={w,h,yaw,pitch};if(!s.busy&&!same(s.want,s.have))send(i);if(s.bitmap){ctx.drawImage(s.bitmap,rect.x,rect.y,rect.w,rect.h);s.drawn=s.have;}},
+  destroy(){worker.terminate();for(const s of slots)s.bitmap?.close();}};
+ let primed=false;
+ await new Promise((resolve,reject)=>{
+  timer=setTimeout(()=>reject(new Error('fork worker timeout')),timeout);
+  worker.onerror=event=>reject(event.error||new Error('fork worker failed'));
+  worker.onmessage=({data})=>{
+   if(data.error)return reject(new Error(data.error));
+   if(data.ready){const [w,h]=size();for(const i of [0,1]){slots[i].want={w,h,yaw:0,pitch:0};send(i);}return;}
+   const s=slots[data.slot];s.bitmap?.close();s.bitmap=data.bitmap;s.have=s.sent;s.busy=false;
+   if(!same(s.want,s.have))send(data.slot);
+   if(!primed){if(slots[0].bitmap&&slots[1].bitmap){primed=true;resolve();}return;}
+   if(!same(s.drawn,s.have))fork.onUpdate?.();};
+  worker.postMessage({a,b},[a,b]);});
+ clearTimeout(timer);return fork;
+ }catch{clearTimeout(timer);worker?.terminate();return null;}}

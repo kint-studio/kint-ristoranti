@@ -37,10 +37,12 @@ test('build: ogni immagine della forchetta, anche quella con percorso a template
  for(const f of readdirSync(join(root,'assets/ristoranti')).filter(f=>f.endsWith('.webp')))assert.ok(existsSync(join(out,'assets/ristoranti',f)),f);
  for(const m of bundle.matchAll(/\/assets\/[\w./-]+\.(?:webp|woff2|jpg)/g))assert.ok(existsSync(join(out,m[0])),m[0]);
 }));
-test('build: il worker è un bundle a parte con hash e il bundle lo richiama per nome',()=>withBuild((out,r)=>{
- const bundle=read(out,r.js),m=bundle.match(/new URL\("\.\/(material-worker\.[0-9a-f]{10}\.js)"/);
- assert.ok(m,'URL del worker con hash nel bundle');assert.ok(existsSync(join(out,'assets/ristoranti',m[1])),m[1]);
- assert.ok(!existsSync(join(out,'assets/ristoranti/material-worker.js')));assert.doesNotMatch(bundle,/material-worker\.js/);
+test('build: i worker (materiale e forchetta GPU) sono bundle a parte con hash e il bundle li richiama per nome',()=>withBuild((out,r)=>{
+ const bundle=read(out,r.js);
+ for(const name of ['material-worker','fork-3d-worker']){const m=bundle.match(new RegExp('new URL\\("\\./('+name+'\\.[0-9a-f]{10}\\.js)"'));
+  assert.ok(m,`URL del worker ${name} con hash nel bundle`);assert.ok(existsSync(join(out,'assets/ristoranti',m[1])),m[1]);
+  assert.doesNotMatch(read(out,'assets/ristoranti/'+m[1]),/import[^(]/,`${m[1]}: nessun import da risolvere`);
+  assert.ok(!existsSync(join(out,`assets/ristoranti/${name}.js`)));assert.doesNotMatch(bundle,new RegExp(name+'\\.js'));}
 }));
 test('build: ogni hash della CSP di _headers corrisponde a uno script inline del dist e viceversa',()=>withBuild(out=>{
  const hdr=read(out,'_headers').split(/\r?\n/),i=hdr.findIndex(l=>l==='/*');assert.ok(i>=0,'regola /* mancante');

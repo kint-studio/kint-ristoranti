@@ -1,5 +1,5 @@
 // Build for publishing: copies the site into dist/ and, for the four Human pages (ristoranti/ and its en/fr/de translations), joins and minifies the stylesheets and bundles landing.js with its modules into one minified file. Names carry a content hash.
-// The Machine pages (ai/) and the assets still loaded on their own (assetsToPublish) are copied unchanged; the material worker becomes its own hashed bundle.
+// The Machine pages (ai/) and the assets still loaded on their own (assetsToPublish) are copied unchanged; the material and fork workers become their own hashed bundles.
 // INDEX=1 (or {index:true}) makes the Human pages and robots.txt of dist/ indexable; the sources in the repository stay noindex.
 // The CSP of dist/_headers is recomputed on the inline scripts of dist/. Local development keeps using the sources without a build.
 // Usage: node tools/build.mjs [outDir]
@@ -20,6 +20,7 @@ const PUBLISHED_DIRS=['ristoranti','ai','en','fr','de'];
 const BUNDLED_PAGES=[...HUMAN_PAGES,'404.html'];
 const ROOT_FILES=['index.html','404.html','_headers','_redirects','robots.txt','sitemap.xml','favicon.ico','apple-touch-icon.png'];
 const BUNDLE_DIR='assets/ristoranti';
+const WORKERS=['material-worker','fork-3d-worker'];
 const walk=d=>readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(d,e.name)):[join(d,e.name)]);
 const rel=(base,f)=>relative(base,f).split(sep).join('/');
 // Tags of the Human pages that the build replaces with the bundles.
@@ -61,10 +62,10 @@ export async function buildSite(out=join(root,'dist'),{index=process.env.INDEX==
  // JS: landing.js and its module graph become one ES module; the modulepreload hints are no longer needed.
  const entry=first.match(/<script type="module" src="([^"]+)"><\/script>/);
  const bundle=async file=>(await build({entryPoints:[file],bundle:true,format:'esm',minify:true,target:'es2020',write:false,plugins:[stripVersion],legalComments:'none'})).outputFiles[0].text;
- // The material worker is loaded with new URL('./material-worker.js?v=…',import.meta.url): it becomes its own bundle with a hashed name, and the URL in landing.js points to it.
- const worker=await bundle(join(root,BUNDLE_DIR,'material-worker.js'));const workerName=`material-worker.${hash(worker)}.js`;writeFileSync(join(out,BUNDLE_DIR,workerName),worker);
- const workerUrl=/\.\/material-worker\.js\?v=[\w.-]+/g;let js=await bundle(local(entry[1]));
- if(!js.match(workerUrl))throw new Error('build: URL del material worker non trovato nel bundle');js=js.replace(workerUrl,`./${workerName}`);
+ // The workers (material, GPU fork) are loaded with new URL('./<name>.js?v=…',import.meta.url): each becomes its own bundle with a hashed name, and the URL in landing.js points to it.
+ let js=await bundle(local(entry[1]));const workers={};
+ for(const name of WORKERS){const worker=await bundle(join(root,BUNDLE_DIR,`${name}.js`));const workerName=`${name}.${hash(worker)}.js`;writeFileSync(join(out,BUNDLE_DIR,workerName),worker);workers[name]=`${BUNDLE_DIR}/${workerName}`;
+  const workerUrl=new RegExp(`\\./${name}\\.js\\?v=[\\w.-]+`,'g');if(!js.match(workerUrl))throw new Error(`build: URL del worker ${name} non trovato nel bundle`);js=js.replace(workerUrl,`./${workerName}`);}
  const jsName=`${BUNDLE_DIR}/landing.${hash(js)}.js`;writeFileSync(join(out,jsName),js);
  // Every Human page gets the same bundles, with root-absolute paths.
  for(const p of BUNDLED_PAGES){let page=readFileSync(join(out,p),'utf8');
@@ -79,6 +80,6 @@ export async function buildSite(out=join(root,'dist'),{index=process.env.INDEX==
  const dropNote=t=>t.split('\n').filter(l=>!l.includes('tools/export.mjs')).join('\n');
  writeFileSync(join(out,'_headers'),dropNote(headers.slice(0,a)+headersBlock(securityBlock(html))+headers.slice(b+HE.length).replace(/^\n/,'')));
  writeFileSync(join(out,'_redirects'),dropNote(readFileSync(join(out,'_redirects'),'utf8')));
- return {css:cssName,js:jsName,worker:`${BUNDLE_DIR}/${workerName}`,stylesheets:links.length,cssBytes:css.length,jsBytes:js.length,pages:HUMAN_PAGES};
+ return {css:cssName,js:jsName,worker:workers['material-worker'],workers,stylesheets:links.length,cssBytes:css.length,jsBytes:js.length,pages:HUMAN_PAGES};
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const r=await buildSite(process.argv[2]?resolve(process.argv[2]):undefined);console.log(`dist/: ${r.stylesheets} fogli di stile -> ${r.css} (${r.cssBytes} B), landing -> ${r.js} (${r.jsBytes} B), worker -> ${r.worker}`);}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){const r=await buildSite(process.argv[2]?resolve(process.argv[2]):undefined);console.log(`dist/: ${r.stylesheets} fogli di stile -> ${r.css} (${r.cssBytes} B), landing -> ${r.js} (${r.jsBytes} B), worker -> ${Object.values(r.workers).join(', ')}`);}
