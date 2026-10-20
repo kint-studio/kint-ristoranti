@@ -9,8 +9,14 @@
 <link rel="preload" href="/assets/geist-sub.woff2?v=ip-1" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/geist-mono-sub.woff2?v=ip-1" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/ristoranti/ristoranti.css?v=r3-1">
+<link rel="modulepreload" href="/assets/ristoranti/landing.js?v=r4-2">
+<link rel="modulepreload" href="/assets/footer-wordmark.js?v=33">
+<link rel="modulepreload" href="/assets/ristoranti/menu.js?v=r4-2">
+<link rel="modulepreload" href="/assets/ristoranti/accordion.js?v=r4-2">
+<link rel="modulepreload" href="/assets/ristoranti/contact.js?v=r4-2">
+<link rel="modulepreload" href="/assets/i18n.js?v=rt-7">
 </head>
-<body class="kf">
+<body>
 <main>
 <section class="kf-hero">
 <div class="kf-scene" data-scene aria-hidden="true"><canvas></canvas><div class="kf-cursor"><i></i></div></div>
@@ -82,11 +88,12 @@
 </footer>
 
 <div id="menu" class="kf-menu" data-open="false" inert role="dialog" aria-modal="true" aria-label="Menu">
-<div class="kf-menu-bar"><a class="kf-logo kf-logo-dark" href="https://kint-perf.pages.dev/" aria-label="RISTOkint, home"><span>RISTO</span><span class="kf-logo-kint">kint</span><span>.</span></a><button type="button" class="kf-menu-toggle" data-menu-close aria-label="Chiudi il menu" aria-controls="menu"><span></span><span></span></button></div>
+<div class="kf-menu-bar"><a class="kf-logo kf-logo-dark" href="https://kint-perf.pages.dev/" aria-label="RISTOkint, home"><span>RISTO</span><span class="kf-logo-kint">kint</span><span>.</span></a><button type="button" class="kf-menu-toggle" data-menu-close data-open="true" aria-label="Chiudi il menu" aria-controls="menu"><span></span><span></span></button></div>
 <div class="kf-menu-caption"><span class="kf-menu-k">k.</span><p>Parti diverse.<br>Nuove possibilità.</p><span class="kf-mono">Strategia / Design / Tecnologia</span><nav class="kf-mono kf-lang-switch" aria-label="Lingua"><a href="/ristoranti/" hreflang="it" lang="it" aria-current="true">IT</a><i aria-hidden="true">|</i><a href="/en/ristoranti/" hreflang="en" lang="en">EN</a><i aria-hidden="true">|</i><a href="/fr/ristoranti/" hreflang="fr" lang="fr">FR</a><i aria-hidden="true">|</i><a href="/de/ristoranti/" hreflang="de" lang="de">DE</a></nav></div>
 <nav class="kf-menu-nav" aria-label="Navigazione principale"><a href="#top">Inizio</a><a href="#servizi">Servizi</a><a href="#faq">FAQ</a><a href="#prenota">Contattaci</a></nav>
 </div>
 
 <nav class="kf-view-switch" data-view-switch aria-label="Versione della pagina"><a href="/ristoranti/" aria-current="page">Human</a><a href="/ai/ristoranti/">Machine</a></nav>
+<script type="module" src="/assets/ristoranti/landing.js?v=r4-2"></script>
 </body>
 </html>
