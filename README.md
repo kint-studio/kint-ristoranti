@@ -1,55 +1,24 @@
-# kint-ristoranti
+# KINT Ristoranti
 
-La landing di kint per i ristoratori (ristoranti, grotti e bar): una pagina sola, con la forchetta 3D nella schermata
-iniziale, i servizi, il modulo di contatto (apre una email pronta verso info@kint.ch) e le FAQ. Ogni lingua ha anche
-una versione testuale ("Machine") per agenti AI e crawler.
-
-Progetto Next.js standard: si pubblica su Vercel (o qualsiasi host Next.js) senza configurazione.
-
-## Avvio
-
-```bash
-npm install
-npm run dev        # http://localhost:3000
-```
-
-Serve Node.js 20.9 o piu' recente.
+Landing statica di KINT per i ristoranti, costruita con lo stesso metodo del sito principale: HTML, CSS e JavaScript senza framework, nessuna dipendenza di runtime.
 
 ## Comandi
 
-| Comando | Cosa fa |
-|---|---|
-| `npm run dev` | server di sviluppo |
-| `npm run lint` | ESLint |
-| `npm test` | test (Vitest): indirizzi attesi e completezza delle traduzioni |
-| `npm run build` | build di produzione (`next build`) |
-| `npm start` | serve la build |
+- `npm install`: installa gli strumenti di sviluppo.
+- `npm run dev`: server locale su http://localhost:3101/ (pagina: http://localhost:3101/ristoranti/).
+- `npm test`: esegue i test (`node --test`).
+- `npm run build`: genera `dist/` (pagine, export per le AI, `_headers`, `_redirects`). `npm run export` è un alias.
+- `python tools/dev_server.py --dist`: serve `dist/` applicando `_headers` e `_redirects`.
 
-## Indirizzi
+## Variabili
 
-| Indirizzo | Pagina |
-|---|---|
-| `/` | landing in italiano |
-| `/machine` | versione testuale in italiano |
-| `/en`, `/fr`, `/de` | landing in inglese, francese, tedesco |
-| `/en/machine`, `/fr/machine`, `/de/machine` | versione testuale tradotta |
+- `BASE`: indirizzo del sito principale, una sola costante in `tools/export.mjs`.
+- `INDEX=1`: abilita l'indicizzazione. Senza, le pagine sono `noindex, nofollow` e `robots.txt` vieta tutto.
 
-Tutto il resto risponde 404. L'italiano sta in `src/app/(it)/`, le altre lingue in `src/app/[lang]/`: sono due layout
-radice, cosi' `<html lang>` e' giusto gia' nell'HTML servito.
+## File condivisi
 
-## Dove sono le cose
+I file in `assets/` presenti anche nel repository principale (`../KINT-codice-completo/assets/`) devono essere identici: lo verifica `tests/shared-assets.test.js`. Le varianti per questa pagina stanno in `assets/ristoranti/`.
 
-- Testi italiani: `src/lib/content.ts`; traduzioni della landing: `src/lib/landing-i18n.ts`; testi
-  dell'interfaccia (menu, modulo, footer) in tutte le lingue: `src/lib/i18n.ts`.
-- La pagina: `src/components/kf/KfLanding.tsx`; la scena con la forchetta: `src/components/kf/KfScene.tsx` e
-  `src/components/kf/engine/` (WebGL2 puro, nessuna libreria 3D).
-- Metadata (titolo, Open Graph, canonical, hreflang, robots): `src/lib/site.ts`.
+## Trasloco futuro
 
-## Dominio e indicizzazione
-
-Il dominio definitivo non e' ancora deciso. L'indirizzo pubblico si cambia in un solo punto, `SITE_URL` in
-`src/lib/site.ts` (oggi `https://kint-perf.pages.dev`): da li' vengono canonical, hreflang e Open Graph.
-
-Finche' non c'e' il dominio le pagine escono con `robots: noindex, nofollow`. Per accendere l'indicizzazione si imposta
-la variabile d'ambiente `NEXT_PUBLIC_INDEX=1` nell'ambiente di build (per esempio nelle impostazioni del progetto su
-Vercel) e si rifà la build.
+Il progetto è pensato per confluire in `kint-website-official`: le pagine diventano cartelle del sito principale e `assets/ristoranti/` si aggiunge a `assets/`.

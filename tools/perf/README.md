@@ -7,3 +7,5 @@ Richiedono `npm i` (puppeteer-core) e Chrome installato (oppure `PUPPETEER_EXECU
 - Lighthouse: `npx --yes lighthouse@12 <url> --preset=desktop --output=json --output-path=out.json` (mobile: senza preset, `--form-factor=mobile`).
 
 I risultati vanno in `.baseline/` (ignorato da git).
+
+Gli strumenti di misura richiedono Node >= 22.12 (puppeteer-core 25).
