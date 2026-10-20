@@ -2,7 +2,7 @@
 // the translated pages en|fr|de/ristoranti/ (tools/i18n.mjs), the SEO head of every human page (canonical, hreflang, social preview, icons, JSON-LD, robots),
 // the Machine pages ai/ristoranti/ in every language, sitemap.xml, robots.txt, _redirects, 404.html and the generated block of _headers (security headers and CSP).
 // ristoranti/index.html is the only source: change the copy there, then run this script. tests/export.test.js fails when the generated files are stale.
-// Usage: node tools/export.mjs [--check]   (INDEX=1 makes the human pages indexable)
+// Usage: node tools/export.mjs [--check]   (sources stay noindex: INDEX=1 applies to tools/build.mjs only)
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {join,dirname,resolve} from 'node:path';
@@ -136,7 +136,7 @@ ${ICONS}
 `;
 
 export const robotsTxt=index=>index?`User-agent: *\nAllow: /\n\nSitemap: ${BASE}/sitemap.xml\n`:`User-agent: *\nDisallow: /\n`;
-const HM='# --- ai-export: inizio',HE='# --- ai-export: fine';
+export const HM='# --- ai-export: inizio',HE='# --- ai-export: fine';
 // CSP hashes: the browser hashes the exact text between <script> and </script>. Scripts with src are covered by 'self'; data blocks (JSON-LD, the i18n JSON) are never executed.
 // Executable: no type, a JavaScript MIME type, or module.
 const executable=a=>{const t=a.match(/(?:^|\s)type\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);if(!t)return true;const v=(t[1]??t[2]??t[3]).trim().toLowerCase();return v===''||v==='module'||/^(?:text|application)\/(?:x-)?(?:java|ecma)script$/.test(v);};
@@ -181,7 +181,8 @@ const current=f=>{try{return readFileSync(join(root,f),'utf8');}catch{return nul
 export const stale=files=>[...files].filter(([f,s])=>current(f)===null||!same(current(f),s)).map(([f])=>f);
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- const {files}=generate(),changed=stale(files);
+ // The committed sources are never indexable: INDEX=1 only reaches the pages built into dist/ (tools/build.mjs).
+ const {files}=generate({index:false}),changed=stale(files);
  if(process.argv.includes('--check')){if(changed.length){console.error(`File generati non aggiornati: ${changed.join(', ')}\nEsegui: npm run export`);process.exit(1);}console.log('File generati aggiornati.');}
- else{for(const f of changed){mkdirSync(dirname(join(root,f)),{recursive:true});writeFileSync(join(root,f),files.get(f));}console.log(`export: ${changed.length} file aggiornati su ${files.size}${INDEX?' (INDEX=1)':''}`);}
+ else{for(const f of changed){mkdirSync(dirname(join(root,f)),{recursive:true});writeFileSync(join(root,f),files.get(f));}console.log(`export: ${changed.length} file aggiornati su ${files.size}`);}
 }
