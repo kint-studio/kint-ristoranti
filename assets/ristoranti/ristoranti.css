@@ -202,3 +202,8 @@ body.kf-menu-open .kf-view-switch{opacity:0;visibility:hidden}
 .kf-view-switch a{border-radius:999px;padding:.375rem 1rem;font-family:var(--kf-mono);font-size:.75rem;line-height:1rem;text-transform:uppercase;letter-spacing:.14em;color:rgba(239,235,226,.75);transition:color .15s cubic-bezier(.4,0,.2,1),background-color .15s cubic-bezier(.4,0,.2,1)}
 .kf-view-switch a:hover{color:#efebe2}
 .kf-view-switch a[aria-current]{background:rgba(255,255,255,.1);color:#d3bd87}
+
+/* 404 (tools/export.mjs): the previous landing's not-found page. */
+.kf-404{display:flex;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:0 var(--kf-gutter);text-align:center}
+.kf-404 h1{font-size:clamp(40px,6vw,88px)}
+.kf-404 .kf-mono{color:var(--kf-muted)}
