@@ -126,10 +126,12 @@ textarea{resize:vertical}
 .kf-form-row{display:grid;gap:2rem}
 @media (min-width:640px){.kf-form-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kf-form label>.kf-mono{display:block;margin-bottom:.25rem;color:var(--kf-muted)}
-.kf-form input,.kf-form textarea{width:100%;border-bottom:1px solid rgba(41,44,37,.3);background:transparent;padding:.75rem 0;font-size:1.125rem;line-height:1.75rem;color:var(--kf-ink);outline-style:none;transition:color .15s cubic-bezier(.4,0,.2,1),border-color .15s cubic-bezier(.4,0,.2,1)}
+.kf-form input,.kf-form textarea{width:100%;border-bottom:1px solid rgba(41,44,37,.3);background:transparent;padding:.75rem 0;font-size:1.125rem;line-height:1.75rem;color:var(--kf-ink);outline-style:none;transition:color .15s cubic-bezier(.4,0,.2,1),border-color .15s cubic-bezier(.4,0,.2,1),box-shadow .15s cubic-bezier(.4,0,.2,1)}
 .kf-form textarea{resize:none}
 .kf-form ::placeholder{color:var(--kf-muted)}
-.kf-form input:focus,.kf-form textarea:focus{border-color:var(--kf-ink)}
+/* Focus: the underline doubles to 2px of ink (box-shadow, no layout shift) and the field label darkens. */
+.kf-form input:focus,.kf-form textarea:focus{border-color:var(--kf-ink);box-shadow:inset 0 -1px 0 var(--kf-ink)}
+.kf-form label:focus-within>.kf-mono{color:var(--kf-ink)}
 .kf-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:1.25rem}
 .kf-form-actions>.kf-mono{max-width:20rem;color:var(--kf-muted)}
 .kf-form-done{font-size:.875rem;line-height:1.25rem;color:var(--kf-soft)}
