@@ -7,7 +7,8 @@ Landing statica di KINT per i ristoranti, costruita con lo stesso metodo del sit
 - `npm install`: installa gli strumenti di sviluppo.
 - `npm run dev`: server locale su http://localhost:3101/ (pagina: http://localhost:3101/ristoranti/).
 - `npm test`: esegue i test (`node --test`).
-- `npm run build`: genera `dist/` (pagine, export per le AI, `_headers`, `_redirects`). `npm run export` è un alias.
+- `npm run build`: genera `dist/` (pagine, export per le AI, `_headers`, `_redirects`); esegue prima `npm run export` e poi costruisce `dist/`.
+- `npm run export`: rigenera i file generati, che sono nel repository (pagine en/fr/de, pagine Machine, sitemap, robots, `_redirects`, blocco generato di `_headers`, 404), a partire da `ristoranti/index.html` e dai dizionari i18n. Va eseguito dopo ogni modifica ai sorgenti: `npm test` fallisce se i file generati sono vecchi.
 - `tools/perf/` (shots, scroll-profile, Lighthouse): vedi `tools/perf/README.md`; servono Chrome e Node >= 22.12.
 - `python tools/dev_server.py --dist`: serve `dist/` applicando `_headers` e `_redirects` (`--root <cartella>` fa lo stesso su un'altra cartella).
 

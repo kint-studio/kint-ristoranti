@@ -1,5 +1,5 @@
 import {FooterWordmark} from '../footer-wordmark.js?v=33';
-import {initMenu} from './menu.js?v=r4-2';
+import {initMenu} from './menu.js?v=r4-3';
 import {initAccordions} from './accordion.js?v=r4-2';
 import {initContact} from './contact.js?v=r4-2';
 import {startHero} from './hero.js?v=r8-1';
