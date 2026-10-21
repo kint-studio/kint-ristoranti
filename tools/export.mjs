@@ -7,7 +7,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {join,dirname,resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {translatePage,LANGS,SOURCE} from './i18n.mjs';
+import {translatePage,LANGS,SOURCE,lf} from './i18n.mjs';
 export const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 // Address of the main site: canonical, hreflang, Open Graph, JSON-LD and the links back to KINT.
 export const BASE='https://kint-perf.pages.dev';
@@ -160,8 +160,9 @@ const headersFile=security=>{let h;try{h=readFileSync(join(root,'_headers'),'utf
 const REDIRECTS=()=>`# Generato da tools/export.mjs: non modificare a mano.\n${LANGS.map(l=>`${pre(l)}/ ${humanPath(l)} 301`).join('\n')}\n${LANGS.slice(1).map(l=>`/${l} ${humanPath(l)} 301`).join('\n')}\n`
  +`# Indirizzi della versione precedente e della cartella /ai/.\n${LANGS.map(l=>`${pre(l)}/machine ${machinePath(l)} 301\n${pre(l)}/ai/ ${machinePath(l)} 301\n${pre(l)}/ai ${machinePath(l)} 301`).join('\n')}\n`;
 
-export function generate({source=readFileSync(join(root,SOURCE),'utf8'),index=process.env.INDEX==='1'}={}){
- const files=new Map();
+// The source is read as LF whatever the checkout: with CRLF the SEO_LINE strip would miss and the SEO block would be duplicated.
+export function generate({source,index=process.env.INDEX==='1'}={}){
+ source=lf(source??readFileSync(join(root,SOURCE),'utf8'));const files=new Map();
  for(const l of LANGS){
   const page=l==='it'?source:translatePage(source,l),c=extract(page);
   files.set(`${dir(l)}ristoranti/index.html`,seoHead(page,c,index));

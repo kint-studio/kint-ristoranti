@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {generate,stale,root,BASE} from '../tools/export.mjs';
@@ -72,3 +72,14 @@ test('ogni link interno delle pagine generate porta a una pagina o a un file che
   if(!files.has(p.replace(/\\/g,'/'))&&!existsSync(join(root,p)))bad.push(`${f}: ${u}`);}
  assert.deepEqual(bad,[]);});
 test('404: noindex, stile della landing, link alla pagina',()=>{const h=files.get('404.html');assert.match(robots(h),/noindex/);assert.ok(h.includes('href="/ristoranti/"'));assert.match(h,/ristoranti\.css\?v=/);});
+
+test('sorgente con fine riga CRLF: un solo canonical e output identico a quello LF',()=>{
+ const src=readFileSync(join(root,'ristoranti/index.html'),'utf8').replace(/\r\n/g,'\n');
+ const lfOut=generate({source:src}).files,crlfOut=generate({source:src.replace(/\n/g,'\r\n')}).files;
+ for(const l of LANGS){const f=file(human(l)),h=crlfOut.get(f);
+  assert.equal(h.match(/<link rel="canonical"/g).length,1,f);
+  assert.equal(h.includes('\r'),false,f);
+  assert.equal(h,lfOut.get(f),f);}
+ assert.deepEqual([...crlfOut.keys()],[...lfOut.keys()]);
+ for(const [f,s] of lfOut)assert.equal(crlfOut.get(f),s,f);
+});

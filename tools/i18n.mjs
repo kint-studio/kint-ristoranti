@@ -58,6 +58,8 @@ export function collect(html){
  return {units,attrs};
 }
 
+// Sources are handled as LF, whatever the checkout's line endings.
+export const lf=s=>s.replace(/\r\n/g,'\n');
 export const tagsOf=s=>[...s.matchAll(/<[^>]+>/g)].map(m=>m[0]).sort();
 const unescapeJs=s=>JSON.parse('"'+s.replace(/\\'/g,"'").replace(/"/g,'\\"')+'"');
 // Keys of the t('…') calls in a JavaScript source, already unescaped.
@@ -74,7 +76,7 @@ export function apply(html,dict,keep){
 }
 
 export function audit(lang,html=readFileSync(join(root,SOURCE),'utf8'),o={}){
- const dict=o.dict??loadDict(lang),keep=o.keep??loadKeep(),{units,attrs}=collect(html),wanted=new Set([...units,...attrs].map(u=>u.key).filter(k=>!keep.has(k)));for(const k of o.js??jsKeys())if(!keep.has(k))wanted.add(k);
+ html=lf(html);const dict=o.dict??loadDict(lang),keep=o.keep??loadKeep(),{units,attrs}=collect(html),wanted=new Set([...units,...attrs].map(u=>u.key).filter(k=>!keep.has(k)));for(const k of o.js??jsKeys())if(!keep.has(k))wanted.add(k);
  return {missing:[...wanted].filter(k=>!(k in dict)),orphans:Object.keys(dict).filter(k=>!wanted.has(k)),badTags:Object.entries(dict).filter(([k,v])=>JSON.stringify(tagsOf(k))!==JSON.stringify(tagsOf(v))).map(([k])=>k)};
 }
 
