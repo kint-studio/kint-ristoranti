@@ -83,3 +83,6 @@ test('sorgente con fine riga CRLF: un solo canonical e output identico a quello 
  assert.deepEqual([...crlfOut.keys()],[...lfOut.keys()]);
  for(const [f,s] of lfOut)assert.equal(crlfOut.get(f),s,f);
 });
+test('Machine francese: gli spazi non separabili della tipografia francese restano (davanti a ? : ; ! e dentro « »)',()=>{const h=files.get('fr/ai/ristoranti/index.html'),t=h.replace(/<[^>]+>/g,' ');
+ assert.ok(t.includes('\u00a0?'),'manca lo spazio non separabile davanti a ?');assert.doesNotMatch(t,/[^\s\u00a0] [?;!]/,'spazio normale davanti a ? ; !');});
+test('CSP: form-action consente il mailto: del modulo anche senza JavaScript',()=>{const csp=files.get('_headers').match(/Content-Security-Policy: ([^\n]+)/)[1];assert.match(csp,/form-action 'self' mailto:(;|$)/);});

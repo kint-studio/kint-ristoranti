@@ -44,7 +44,8 @@ const MACHINE_CSS='/assets/machine.css?v=pkg-1',SWITCH_CSS='/assets/mode-switch.
 // ---- reading a human page (Italian or translated)
 const ENT={amp:'&',lt:'<',gt:'>',quot:'"',nbsp:' '};
 const decode=s=>s.replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16))).replace(/&#(\d+);/g,(m,d)=>String.fromCodePoint(Number(d))).replace(/&(amp|lt|gt|quot|nbsp);/g,(m,e)=>ENT[e]);
-const text=h=>decode(h.replace(/<br\s*\/?>/g,' ').replace(/<[^>]+>/g,'')).replace(/\s+/g,' ').trim();
+// Collapses ASCII whitespace only: the non-breaking spaces of French typography (before ? : ; ! and inside « ») must survive.
+const text=h=>decode(h.replace(/<br\s*\/?>/g,' ').replace(/<[^>]+>/g,'')).replace(/[ \t\r\n\f]+/g,' ').trim();
 function one(h,re,label){const m=h.match(re);if(!m)throw new Error(`export: in ${SOURCE} manca ${label}`);return m;}
 const all=(h,re)=>[...h.matchAll(re)];
 const section=(html,id)=>one(html,new RegExp(`<section[^>]*\\bid="${id}"[\\s\\S]*?</section>`),`la sezione #${id}`)[0];
@@ -148,7 +149,7 @@ export function inlineScriptHashes(html){
 // connect-src 'self' covers the material worker's fetch of the fork images; img-src data:/blob: covers canvas output; worker-src is 'self' only (no blob workers).
 export function securityBlock(files){
  const hashes=[...new Set([...files].filter(([f])=>f.endsWith('.html')).flatMap(([,h])=>inlineScriptHashes(h)))].sort();
- const csp=["default-src 'self'",`script-src 'self'${hashes.map(x=>' '+x).join('')}`,"style-src 'self' 'unsafe-inline'","img-src 'self' data: blob:","font-src 'self'","connect-src 'self'","worker-src 'self'","frame-ancestors 'none'","base-uri 'self'","form-action 'self'","object-src 'none'"].join('; ');
+ const csp=["default-src 'self'",`script-src 'self'${hashes.map(x=>' '+x).join('')}`,"style-src 'self' 'unsafe-inline'","img-src 'self' data: blob:","font-src 'self'","connect-src 'self'","worker-src 'self'","frame-ancestors 'none'","base-uri 'self'","form-action 'self' mailto:","object-src 'none'"].join('; ');
  return `/*\n  Content-Security-Policy: ${csp}\n  X-Frame-Options: DENY\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()\n  X-Content-Type-Options: nosniff\n`;
 }
 export const headersBlock=security=>`${HM}\n# Generato da tools/export.mjs: non modificare a mano.\n${security}${HE}\n`;
